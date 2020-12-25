@@ -32,7 +32,7 @@ def transcript_preprocessor(data, trasncript_colname = 'transcript'):
     punctuations = re.escape(string.punctuation)
 
     stop = stopwords.words('english')
-    stop.append('\n')
+    stop.append('\n')q
     stop.append('n')
 
 
@@ -109,19 +109,18 @@ def TopXWords_fromEntire(data, X, vocab_start_col_idx = False):
 
 
 
-
-
-def TopXTopics_TopYDocuments_Generator(data, X, Y, trasncript_colname = "TRANSCRIPT" ):
+def TopXTopics_TopYDocuments_Generator(dt, X, Y, trasncript_colname = "TRANSCRIPT" ):
+    
+    data = dt.copy()
     
     # First apply LDA
     cv = TfidfVectorizer(max_df=0.5, min_df= 3 ) 
+    
     cv_fit_transformed = cv.fit_transform(data[trasncript_colname])
     feature = cv.get_feature_names()
     lda = LatentDirichletAllocation(n_components = X, random_state =1 )
     ldamod = lda.fit(cv_fit_transformed)
     score_document_topic = pd.DataFrame(ldamod.transform(cv_fit_transformed)) # Row: document, Column: topic
-    score_topic_words = pd.DataFrame(ldamod.components_)  # Row: topic, Column: words(feature)
-    score_topic_words.columns = feature 
     
     result_df = pd.DataFrame([])
     
@@ -132,11 +131,43 @@ def TopXTopics_TopYDocuments_Generator(data, X, Y, trasncript_colname = "TRANSCR
         x= pd.DataFrame(score_document_topic[i]).sort_values(by=i, ascending=False)[0:Y]
         x = pd.DataFrame(data.loc[data.index.intersection(x.index),:][trasncript_colname])
         x.columns = ["topic_"+str(i)]
-        x = x.reset_index().drop(columns=["index"])
+        x = x.reset_index() #.drop(columns=["index"])
+        
+        result_df = pd.concat([result_df, x], axis = 1) 
+        
+    return result_df
+
+
+
+
+def TopXTopics_TopYWords_Generator(dt, X, Y, trasncript_colname = "TRANSCRIPT" ):
+    
+    data = dt.copy()
+    
+    # First apply LDA
+    cv = TfidfVectorizer(max_df=0.5, min_df= 3 ) 
+    
+    cv_fit_transformed = cv.fit_transform(data[trasncript_colname])
+    feature = cv.get_feature_names()
+    lda = LatentDirichletAllocation(n_components = X, random_state =1 )
+    ldamod = lda.fit(cv_fit_transformed)
+    score_topic_words = pd.DataFrame(ldamod.components_)  # Row: topic, Column: words(feature)
+    score_topic_words.columns = feature 
+    
+    result_df = pd.DataFrame([])
+
+    # For Top X Topics, get Top Y Words , and make it into dataframe
+    for i in range(X):
+    
+        x= pd.DataFrame(score_topic_words.iloc[i,:]).sort_values(by=[i], ascending=False)[0:Y]
+        x= pd.DataFrame(x.T.columns)
+        x.columns = ["topic_"+str(i)]
         
         result_df = pd.concat([result_df, x], axis = 1) 
         
     return result_df
     
+
+
     
 
