@@ -1,0 +1,95 @@
+library(topicmodels)
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+library(stm)
+gctorture(FALSE)
+
+#google_doc_id <- "1LcX-JnpGB0lU1iDnXnxB6WFqBywUKpew" # google file ID
+#poliblogs<-read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", google_doc_id), stringsAsFactors = FALSE)
+
+trump_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\trump_more_data_2016_1_1_to_2016_11_8.csv', header = TRUE)
+trump_more_data$DATE = as.Date(trump_more_data$DATE)
+
+
+
+hillary_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\hillary_more_data_2016_1_1_to_2016_11_8.csv', header = TRUE)
+hillary_more_data$DATE = as.Date(hillary_more_data$DATE)
+
+
+processed_trump <- textProcessor( trump_more_data$CONTENT, 
+                                  removenumbers = FALSE, 
+                                  metadata = trump_more_data %>% select(CONTENT, DATE) )
+
+processed_hillary <- textProcessor( hillary_more_data$CONTENT,
+                                    removenumbers = FALSE,
+                                    metadata = hillary_more_data %>% select(CONTENT, DATE) )
+
+out_trump <- prepDocuments(processed_trump$documents, processed_trump$vocab, processed_trump$meta)
+out_hillary <- prepDocuments(processed_hillary$documents, processed_hillary$vocab, processed_hillary$meta)
+
+docs_trump <- out_trump$documents
+vocab_trump <- out_trump$vocab
+meta_trump <-out_trump$meta
+
+docs_hillary <- out_hillary$documents
+vocab_hillary <- out_hillary$vocab
+meta_hillary <-out_hillary$meta
+
+
+
+
+findingk_trump <- searchK(out_trump$documents, out_trump$vocab, 
+                          K = c(4:20), # when trying K=3, it leads to an error
+                          prevalence =~ DATE,
+                          data = out_trump$meta, verbose=FALSE)
+plot(findingk_trump)
+
+
+# when K=3, chol(): decomposition failed happens. seems kind of technical issue there.
+First_STM_trump <- stm(  documents = docs_trump, vocab = vocab_trump,
+                         K = 5, prevalence =~ DATE ,
+                         max.em.its = 75, data = meta_trump,
+                         init.type = "Spectral", verbose = FALSE )
+plot(First_STM_trump)
+
+predict_topics_trump<-estimateEffect(formula = c(1:5) ~ DATE, stmobj = First_STM_trump, metadata = meta_trump, uncertainty = "Global")
+
+#https://github.com/bstewart/stm/issues/16
+plot(predict_topics_trump,'DATE', method = "continuous", topics =c(1:5),
+      printlegend = FALSE, xaxt = "n", xlab = "Time (2016)")
+monthseq <- seq(from = as.Date("2016-01-01"),
+                to = as.Date("2016-11-07"), by = "month")
+monthnames <- months(monthseq)
+axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)),
+     labels = monthnames)
+
+
+
+
+# check data type for 'date' column in this dataframe
+google_doc_id <- "1LcX-JnpGB0lU1iDnXnxB6WFqBywUKpew" # google file ID
+poliblogs<-read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", google_doc_id), stringsAsFactors = FALSE)
+poliblogs$day
+
+
+
+
+
+findThoughts(First_STM_trump, texts = trump_more_data$CONTENT, n = 1, topics = c(1:5))
+
+
+findingk_hillary <- searchK(out_hillary$documents, out_hillary$vocab, 
+                          K = c(4:20), # when trying K=3, it leads to an error
+                          prevalence =~ DATE,
+                          data = out_hillary$meta, verbose=FALSE)
+plot(findingk_hillary)
+
+
+
+First_STM_hillary <- stm(  documents = docs_hillary, vocab = vocab_hillary,
+                           K = 6, prevalence =~ DATE ,
+                           max.em.its = 75, data = meta_hillary,
+                           init.type = "Spectral", verbose = FALSE )
+
+plot(First_STM_hillary)
