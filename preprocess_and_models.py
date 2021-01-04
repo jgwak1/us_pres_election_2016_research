@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import re
-import nltk
+from nltk import *
+
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
@@ -16,29 +17,45 @@ from sklearn.decomposition import LatentDirichletAllocation
 
 def stop_word_remover(Input, stopword_ls):
 
-    x = ' '.join([word for word in Input.split() if ( word not in stopword_ls )])
+    x = ' '.join([word for word in Input.split() if ( word not in stopword_ls )]) 
     return x 
 
 def stem_by_row(Input):
-    from nltk.stem import PorterStemmer
     stemmer = PorterStemmer()
     x = ' '.join([stemmer.stem(word) for word in Input.split()])
     return x 
 
+def custom_remover(Input):
+
+    # Remove all numbers except for years
+    x = ' '.join([word for word in Input.split() if ((word<='2100') & (word>='1900') & (len(word)==4)) or word.isalpha() ])   
+ 
+    # Remove words combined with both alphabets and numbers 
+    exclude_ls = []
+    for word in x.split(): 
+        if any(chr.isalpha() for chr in word) and any(chr.isdigit() for chr in word):
+            exclude_ls.append(word)
+    x = ' '.join([word for word in x.split() if ( word not in exclude_ls )]) 
+
+    return x 
+    
 def transcript_preprocessor(data, trasncript_colname = 'transcript'):
 
     from nltk.corpus import stopwords    
     import string 
     punctuations = re.escape(string.punctuation)
+    punctuations+='—' ; punctuations+='–'; punctuations+='•'
+
 
     stop = stopwords.words('english')
-    stop.append('\n')q
+    stop.append('\n')
     stop.append('n')
 
 
     data[trasncript_colname] = data.apply(lambda row: row[trasncript_colname].lower(), axis=1)
     data[trasncript_colname] = data.apply(lambda row: re.sub(r'['+punctuations+']', '', row[trasncript_colname]), axis= 1)
-    data[trasncript_colname] = data.apply(lambda row:  stop_word_remover(row[trasncript_colname],stop), axis= 1)
+    data[trasncript_colname] = data.apply(lambda row: stop_word_remover(row[trasncript_colname],stop), axis= 1)
+    data[trasncript_colname] = data.apply(lambda row: custom_remover(row[trasncript_colname]), axis= 1)
     data[trasncript_colname] = data.apply(lambda row: stem_by_row(row[trasncript_colname]), axis= 1)
 
     return data
@@ -49,7 +66,7 @@ def transcript_preprocessor(data, trasncript_colname = 'transcript'):
 # LDA /w
 
 
-def topic_modeling_by_candidate(data, candidate_list, trasncript_colname = 'TRANSCRIPT' ):
+def DocWordScorebyCand_ColGenerator(data, candidate_list, trasncript_colname = 'TRANSCRIPT' ):
 
     data = data[ (data[trasncript_colname]!="longer public video") & (data[trasncript_colname]!="noneyoutub") ]
     
@@ -62,7 +79,6 @@ def topic_modeling_by_candidate(data, candidate_list, trasncript_colname = 'TRAN
                                                      #   When these parameters are changed, it can lead to cases where too much pruning occurs.
             
     cv = TfidfVectorizer( max_df=0.5, min_df=3 )  
-    
     
     for candidate in candidate_list:
         
@@ -169,5 +185,4 @@ def TopXTopics_TopYWords_Generator(dt, X, Y, trasncript_colname = "TRANSCRIPT" )
     
 
 
-    
 
