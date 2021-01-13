@@ -65,47 +65,52 @@ def transcript_preprocessor(data, trasncript_colname = 'transcript'):
 
 # LDA /w
 
+def lda_DocWordScore_generator(transcript_data, vectorizer_object, lda_ojbect = LatentDirichletAllocation(n_components=10, random_state= 1) ):
 
-def DocWordScorebyCand_ColGenerator(data, candidate_list, trasncript_colname = 'TRANSCRIPT' ):
+    vectorizer_fit = vectorizer_object.fit_transform(transcript_data) #can extract feature after this
+    feature = vectorizer_object.get_feature_names() # words
 
-    data = data[ (data[trasncript_colname]!="longer public video") & (data[trasncript_colname]!="noneyoutub") ]
+    ldamod = lda_ojbect.fit(vectorizer_fit)
+
+    score_document_topic = pd.DataFrame(lda_ojbect.fit_transform(vectorizer_fit)) # Row: document, Column: topic    
+    score_topic_words = pd.DataFrame(ldamod.components_) # Row: topic, Column: words(feature)
+    score_topic_words.columns = feature  
+    score_topic_words = score_topic_words.div(score_topic_words.sum(axis=1), axis=0) # normalized socre_topic_words
     
-    result_df = pd.DataFrame()
-    
-    #cv = CountVectorizer(max_df=0.5, min_df=3, stop_words='english') # max_df and min_f are hyperparatmeters dealwith this part 
+    score_document_words = score_document_topic.dot(score_topic_words)
 
-    #cv = CountVectorizer(max_df=0.5, min_df=3 )     # "max_df==1.0(default)" means ignore terms that appear in more than 100% of the documents (default setting doesn't ignore any terms)
+    return score_document_words
+
+
+def DocWordScorebyVar_ColGenerator(data, values_of_variable, variable_colname = 'CANDIDATES', transcript_colname = 'TRANSCRIPT', vectorizer_obj = TfidfVectorizer( max_df=0.5, min_df=3 )  ):
+
+    '''
+    CountVectorizer(max_df=0.5, min_df=3 )     # "max_df==1.0(default)" means ignore terms that appear in more than 100% of the documents (default setting doesn't ignore any terms)
                                                      # 'min_df==1 (default)' means ignore terms that appear in less than 1 document. (default setting does not ignore any terms)
                                                      #   When these parameters are changed, it can lead to cases where too much pruning occurs.
             
-    cv = TfidfVectorizer( max_df=0.5, min_df=3 )  
-    
-    for candidate in candidate_list:
-        
-        cand_data = data[data['CANDIDATES']==candidate]
-    
-        cv_fit = cv.fit_transform( cand_data[trasncript_colname] )  #can extracture feature from cv after this
-        feature = cv.get_feature_names() # words 
-        
-        lda = LatentDirichletAllocation(n_components=10, random_state= 1)
-        ldamod = lda.fit(cv_fit)
+    TfidfVectorizer( max_df=0.5, min_df=3 )  
+    '''
 
-        prob_document_topic = pd.DataFrame(lda.fit_transform(cv_fit)) # Row: document, Column: topic
-          
-        score_topic_words = pd.DataFrame(ldamod.components_)  # Row: topic, Column: words(feature)
-        score_topic_words.columns = feature 
-        prob_topic_words = score_topic_words.div(score_topic_words.sum(axis=1), axis=0) # normalized
+    data = data[ (data[transcript_colname]!="longer public video") & (data[transcript_colname]!="noneyoutub") ]
+    
+    result_df = pd.DataFrame()
+    
+    for value in values_of_variable:
         
-        prob_document_words = prob_document_topic.dot(prob_topic_words)
+        value_corresponding_data = data[data[variable_colname]==value]
+    
+        score_document_words = lda_DocWordScore_generator( transcript_data = value_corresponding_data[transcript_colname], vectorizer_object = vectorizer_obj )
 
-        cand_data = cand_data.reset_index()
+        value_corresponding_data = value_corresponding_data.reset_index()
         
-        cand_data_prob_document_words = pd.concat([cand_data, prob_document_words], axis = 1 )
+        value_data_w_score_doc_words = pd.concat([value_corresponding_data, score_document_words], axis = 1 )
         
-        result_df = pd.concat([result_df, cand_data_prob_document_words], axis = 0, join = "outer", ignore_index=False, sort=False)
+        result_df = pd.concat([result_df, value_data_w_score_doc_words], axis = 0, join = "outer", ignore_index=False, sort=False)
         
         
     return result_df  
+
 
 
 
