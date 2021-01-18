@@ -5,13 +5,8 @@ library(ggplot2)
 library(stm)
 gctorture(FALSE)
 
-#google_doc_id <- "1LcX-JnpGB0lU1iDnXnxB6WFqBywUKpew" # google file ID
-#poliblogs<-read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", google_doc_id), stringsAsFactors = FALSE)
-
 trump_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\trump_more_data_2016_1_1_to_2016_11_8.csv', header = TRUE)
 trump_more_data$DATE = as.Date(trump_more_data$DATE)
-
-
 
 hillary_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\hillary_more_data_2016_1_1_to_2016_11_8.csv', header = TRUE)
 hillary_more_data$DATE = as.Date(hillary_more_data$DATE)
@@ -19,11 +14,13 @@ hillary_more_data$DATE = as.Date(hillary_more_data$DATE)
 
 processed_trump <- textProcessor( trump_more_data$CONTENT, 
                                   removenumbers = FALSE, 
-                                  metadata = trump_more_data %>% select(CONTENT, DATE) )
+                                  # didn't include "CONTENT_TYPE" as "CONTENT_CATEGORY" already takes care of "tweet"
+                                  metadata = trump_more_data %>% select(CONTENT, CONTENT_CATEGORY, DATE) )
 
-processed_hillary <- textProcessor( hillary_more_data$CONTENT,
+processed_hillary <- textProcessor( hillary_more_data$CONTENT, 
                                     removenumbers = FALSE,
-                                    metadata = hillary_more_data %>% select(CONTENT, DATE) )
+                                    # didn't include "CONTENT_TYPE" as no need to, and also it's all 'text'"
+                                    metadata = hillary_more_data %>% select(CONTENT,CONTENT_CATEGORY,DATE) )
 
 out_trump <- prepDocuments(processed_trump$documents, processed_trump$vocab, processed_trump$meta)
 out_hillary <- prepDocuments(processed_hillary$documents, processed_hillary$vocab, processed_hillary$meta)
@@ -37,21 +34,37 @@ vocab_hillary <- out_hillary$vocab
 meta_hillary <-out_hillary$meta
 
 
-
-
 findingk_trump <- searchK(out_trump$documents, out_trump$vocab, 
                           K = c(4:20), # when trying K=3, it leads to an error
-                          prevalence =~ DATE,
-                          data = out_trump$meta, verbose=FALSE)
+                          #  didn't include "CONTENT_TYPE" as "CONTENT_CATEGORY" already takes care of "tweet"
+                          prevalence =~ CONTENT_CATEGORY + DATE,
+                          data = meta_trump, verbose=FALSE)
 plot(findingk_trump)
+
 
 
 # when K=3, chol(): decomposition failed happens. seems kind of technical issue there.
 First_STM_trump <- stm(  documents = docs_trump, vocab = vocab_trump,
-                         K = 5, prevalence =~ DATE ,
-                         max.em.its = 75, data = meta_trump,
+                         K = 5, 
+                         data = meta_trump,
+                         prevalence =~ CONTENT_CATEGORY + DATE,
+                         content =~ CONTENT_CATEGORY,  # only one content variable is available
+                         LDAbeta = FALSE,
+                         max.em.its = 200,
+                         gamma.prior = 'L1', #since it didn't converge, this was recommende 
                          init.type = "Spectral", verbose = FALSE )
-plot(First_STM_trump)
+
+plot(First_STM_trump, n = 10)
+
+
+trump_sagelabels_res = sageLabels(First_STM_trump, n=10)
+
+#check the followings!!
+trump_sagelabels_res$kappa
+trump_sagelabels_res$kappa.m
+trump_sagelabels_res$covnames
+trump_sagelabels_res$marginal
+
 
 predict_topics_trump<-estimateEffect(formula = c(1:5) ~ DATE, stmobj = First_STM_trump, metadata = meta_trump, uncertainty = "Global")
 
@@ -73,23 +86,44 @@ poliblogs<-read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", 
 poliblogs$day
 
 
-
-
-
 findThoughts(First_STM_trump, texts = trump_more_data$CONTENT, n = 1, topics = c(1:5))
 
 
 findingk_hillary <- searchK(out_hillary$documents, out_hillary$vocab, 
                           K = c(4:20), # when trying K=3, it leads to an error
-                          prevalence =~ DATE,
+                          # didn't include "CONTENT_TYPE" as it was all "text"
+                          prevalence =~ CONTENT_CATEGORY+DATE,
                           data = out_hillary$meta, verbose=FALSE)
 plot(findingk_hillary)
 
 
 
+
+
+
+
 First_STM_hillary <- stm(  documents = docs_hillary, vocab = vocab_hillary,
-                           K = 6, prevalence =~ DATE ,
-                           max.em.its = 75, data = meta_hillary,
+                           K = 6, 
+                           data = meta_hillary,
+                           prevalence =~ CONTENT_CATEGORY+DATE,
+                           content =~ CONTENT_CATEGORY,
+                           LDAbeta = FALSE,
+                           max.em.its = 200,
+                           gamma.prior = 'L1',
                            init.type = "Spectral", verbose = FALSE )
 
-plot(First_STM_hillary)
+hillary_sagelabels_res = sageLabels(First_STM_hillary, n=10)
+
+hillary_sagelabels_res
+#check the followings!!
+hillary_sagelabels_res$kappa
+hillary_sagelabels_res$kappa.m
+hillary_sagelabels_res$covnames
+hillary_sagelabels_res$marginal
+
+
+
+
+
+
+plot(First_STM_hillary, n = 10)
