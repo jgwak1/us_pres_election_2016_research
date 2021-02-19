@@ -12,15 +12,15 @@ hillary_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBo
 hillary_more_data$DATE = as.Date(hillary_more_data$DATE)
 
 
-processed_trump <- textProcessor( trump_more_data$CONTENT, 
+processed_trump <- textProcessor( trump_more_data$PROCESSED, 
                                   removenumbers = FALSE, 
                                   # didn't include "CONTENT_TYPE" as "CONTENT_CATEGORY" already takes care of "tweet"
-                                  metadata = trump_more_data %>% select(CONTENT, CONTENT_CATEGORY, DATE) )
+                                  metadata = trump_more_data %>% select(PROCESSED, CONTENT_CATEGORY, DATE) )
 
-processed_hillary <- textProcessor( hillary_more_data$CONTENT, 
+processed_hillary <- textProcessor( hillary_more_data$PROCESSED, 
                                     removenumbers = FALSE,
                                     # didn't include "CONTENT_TYPE" as no need to, and also it's all 'text'"
-                                    metadata = hillary_more_data %>% select(CONTENT,CONTENT_CATEGORY,DATE) )
+                                    metadata = hillary_more_data %>% select(PROCESSED,CONTENT_CATEGORY,DATE) )
 
 out_trump <- prepDocuments(processed_trump$documents, processed_trump$vocab, processed_trump$meta)
 out_hillary <- prepDocuments(processed_hillary$documents, processed_hillary$vocab, processed_hillary$meta)
@@ -45,7 +45,7 @@ plot(findingk_trump)
 
 # when K=3, chol(): decomposition failed happens. seems kind of technical issue there.
 First_STM_trump <- stm(  documents = docs_trump, vocab = vocab_trump,
-                         K = 5, 
+                         K = 4, 
                          data = meta_trump,
                          prevalence =~ CONTENT_CATEGORY + DATE,
                          content =~ CONTENT_CATEGORY,  # only one content variable is available
@@ -55,6 +55,11 @@ First_STM_trump <- stm(  documents = docs_trump, vocab = vocab_trump,
                          init.type = "Spectral", verbose = FALSE )
 
 plot(First_STM_trump, n = 10)
+
+
+
+findThoughts(model = First_STM_trump, texts = trump_more_data$PROCESSED, n = 10, topics= c(1:4))
+findThoughts(model = First_STM_trump, texts = trump_more_data$CONTENT, n = 10, topics= c(1:4))
 
 
 trump_sagelabels_res = sageLabels(First_STM_trump, n=10)
@@ -103,7 +108,7 @@ plot(findingk_hillary)
 
 
 First_STM_hillary <- stm(  documents = docs_hillary, vocab = vocab_hillary,
-                           K = 6, 
+                           K = 5, 
                            data = meta_hillary,
                            prevalence =~ CONTENT_CATEGORY+DATE,
                            content =~ CONTENT_CATEGORY,
@@ -123,7 +128,8 @@ hillary_sagelabels_res$marginal
 
 
 
-
+findThoughts(model = First_STM_hillary, texts = hillary_more_data$PROCESSED, n = 10, topics= c(1:5))
+findThoughts(model = First_STM_hillary, texts = hillary_more_data$CONTENT, n = 10, topics= c(1:5))
 
 
 plot(First_STM_hillary, n = 10)
