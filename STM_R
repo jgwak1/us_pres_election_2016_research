@@ -5,10 +5,10 @@ library(ggplot2)
 library(stm)
 gctorture(FALSE)
 
-trump_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\trump_more_data_2016_1_1_to_2016_11_8.csv', header = TRUE)
+trump_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\Additional_Data_DonaldTrump.csv', header = TRUE)
 trump_more_data$DATE = as.Date(trump_more_data$DATE)
 
-hillary_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\hillary_more_data_2016_1_1_to_2016_11_8.csv', header = TRUE)
+hillary_more_data = read.csv('C:\\Users\\jgwak\\OneDrive\\Desktop\\JupyterNoteBook_WorkingDirectory\\election_research_sikdar\\Additional_Data_HillaryClinton.csv.csv', header = TRUE)
 hillary_more_data$DATE = as.Date(hillary_more_data$DATE)
 
 
